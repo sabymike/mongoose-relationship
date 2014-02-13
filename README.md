@@ -93,14 +93,16 @@ child.remove() // The parent's child property will now be unset
 ####Plugin
 The plugin currently has the following options
 
-- ####relationshipPathName
-A string to let the plugin know which path on your schema the relationship will be created. Defaults to **relationship**
+- **relationshipPathName**
+
+    A string to let the plugin know which path on your schema the relationship will be created. Defaults to **relationship**
 
 ####Path Value
 When creating a path on a schema that will represent the relationship, the childPath option is required
 
-- ####childPath
-A string which should match an existing path in target ref schema. If this path does not exist the plugin will have no affect on the target ref.
+- **childPath**
+
+    A string which should match an existing path in target ref schema. If this path does not exist the plugin will have no affect on the target ref.
 
 # Tests
 Test can be run simply by installing and running mocha
