@@ -1,0 +1,28 @@
+{
+    "name":"mongoose-relationship",
+    "version":"0.0.1",
+    "description":"mongoose plugin to create maintain one-many and many-many bidirectional relationships between two schemas",
+    "main":"index.js",
+    "scripts": {
+        "test":"mocha"
+    },
+    "keywords": [
+        "mongoose",
+        "parent"
+    ],
+    "author": "Mike Sabatini <mike@parallelboxes.com>",
+    "license":"MIT",
+    "dependencies": {
+        "underscore":"1.5.x"
+    },
+    "devDependencies": {
+        "mocha":"1.14.x",
+        "should":"3.1.x",
+        "mongoose":"3.8.x",
+        "async":"0.2.x"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/sabymike/mongoose-relationship"
+    }
+}
