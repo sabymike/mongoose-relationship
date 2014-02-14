@@ -27,14 +27,14 @@ describe("Schema Key Tests", function() {
             (function() {
                 ChildSchema.add({relation: Schema.ObjectId });
                 ChildSchema.plugin(relationship, { relationshipPathName: 'relation' });
-            }).should.throw('Relationship requires a ref');
+            }).should.throw('Relationship relation requires a ref');
         });
 
         it("should thrown an error if the relationship path does not have a child collection option", function() {
             (function() {
                 ChildSchema.add({relation:{ type: Schema.ObjectId, ref:'ParentSchema'}});
                 ChildSchema.plugin(relationship, { relationshipPathName: 'relation' });
-            }).should.throw('Relationship requires a childPath for its parent');
+            }).should.throw('Relationship relation requires a childPath for its parent');
         });
 
         it("should not throw an error if all the parameters are set correctly", function() {
@@ -46,17 +46,20 @@ describe("Schema Key Tests", function() {
     });
 
     describe("One-To-One", function() {
-        var ParentSchema = new Schema({
-            child: { type:Schema.ObjectId, ref:"ChildOneOne" }
-        });
-        var Parent = mongoose.model("ParentOneOne", ParentSchema);
+        var Child, Parent;
+        before(function() {
+            var ParentSchema = new Schema({
+                child: { type:Schema.ObjectId, ref:"ChildOneOne" }
+            });
+            Parent = mongoose.model("ParentOneOne", ParentSchema);
 
-        var ChildSchema = new Schema({
-            name:String,
-            parent: { type: Schema.ObjectId, ref: "ParentOneOne", childPath: "child" }
+            var ChildSchema = new Schema({
+                name:String,
+                parent: { type: Schema.ObjectId, ref: "ParentOneOne", childPath: "child" }
+            });
+            ChildSchema.plugin(relationship, { relationshipPathName: 'parent' });
+            Child = mongoose.model("ChildOneOne", ChildSchema);
         });
-        ChildSchema.plugin(relationship, { relationshipPathName: 'parent' });
-        var Child = mongoose.model("ChildOneOne", ChildSchema);
 
         beforeEach(function() {
             this.parent = new Parent({});
@@ -106,17 +109,20 @@ describe("Schema Key Tests", function() {
     });
 
     describe("One-To-Many", function() {
-        var ParentSchema = new Schema({
-            children:[{type:Schema.ObjectId, ref:"ChildOneMany" }]
-        });
-        var Parent = mongoose.model("ParentOneMany", ParentSchema);
+        var Child, Parent;
+        before(function() {
+            var ParentSchema = new Schema({
+                children:[{type:Schema.ObjectId, ref:"ChildOneMany" }]
+            });
+            Parent = mongoose.model("ParentOneMany", ParentSchema);
 
-        var ChildSchema = new Schema({
-            name:String,
-            parent: { type: Schema.ObjectId, ref:"ParentOneMany", childPath:"children" }
+            var ChildSchema = new Schema({
+                name:String,
+                parent: { type: Schema.ObjectId, ref:"ParentOneMany", childPath:"children" }
+            });
+            ChildSchema.plugin(relationship, { relationshipPathName: 'parent' });
+            Child = mongoose.model("ChildOneMany", ChildSchema);
         });
-        ChildSchema.plugin(relationship, { relationshipPathName: 'parent' });
-        var Child = mongoose.model("ChildOneMany", ChildSchema);
 
         beforeEach(function() {
             this.parent = new Parent({});
@@ -166,17 +172,20 @@ describe("Schema Key Tests", function() {
     });
 
     describe("Many-To-Many", function() {
-        var ParentSchema = new Schema({
-            children:[{type:Schema.ObjectId, ref:"ChildManyMany" }]
-        });
-        var Parent = mongoose.model("ParentManyMany", ParentSchema);
+        var Child, Parent;
+        before(function() {
+            var ParentSchema = new Schema({
+                children:[{type:Schema.ObjectId, ref:"ChildManyMany" }]
+            });
+            Parent = mongoose.model("ParentManyMany", ParentSchema);
 
-        var ChildSchema = new Schema({
-            name:String,
-            parents: [{ type: Schema.ObjectId, ref:"ParentManyMany", childPath:"children" }]
+            var ChildSchema = new Schema({
+                name:String,
+                parents: [{ type: Schema.ObjectId, ref:"ParentManyMany", childPath:"children" }]
+            });
+            ChildSchema.plugin(relationship, { relationshipPathName: 'parents' });
+            Child = mongoose.model("ChildManyMany", ChildSchema);
         });
-        ChildSchema.plugin(relationship, { relationshipPathName: 'parents' });
-        var Child = mongoose.model("ChildManyMany", ChildSchema);
 
         beforeEach(function() {
             this.parent = new Parent({});
@@ -235,6 +244,136 @@ describe("Schema Key Tests", function() {
                         }
                         done(err);
                     });
+                });
+            });
+        });
+    });
+
+    describe("Many-To-Many With Multiple relationships", function() {
+        var Child, Parent, OtherParent;
+        before(function() {
+            var ParentSchema = new Schema({
+                children:[{type:Schema.ObjectId, ref:"ChildMultiple" }]
+            });
+            Parent = mongoose.model("ParentMultiple", ParentSchema);
+
+            var OtherParentSchema = new Schema({
+                otherChildren:[{ type:Schema.ObjectId, ref:"ChildMultiple" }]
+            });
+            OtherParent = mongoose.model("OtherParentMultiple", OtherParentSchema);
+
+            var ChildSchema = new Schema({
+                name:String,
+                parents: [{ type: Schema.ObjectId, ref:"ParentMultiple", childPath:"children" }],
+                otherParents: [{ type: Schema.ObjectId, ref:"OtherParentMultiple", childPath:"otherChildren" }]
+            });
+            ChildSchema.plugin(relationship, { relationshipPathName: ['parents', 'otherParents'] });
+            Child = mongoose.model("ChildMultiple", ChildSchema);
+        });
+
+        beforeEach(function() {
+            this.parent = new Parent({});
+            this.otherParent = new OtherParent({});
+            this.child = new Child({});
+        });
+
+        it("should not add a child if the parent does not exist in the database", function(done) {
+            this.child.parents.push(this.parent._id);
+            this.child.otherParents.push(this.otherParent._id);
+            this.child.save(function(err, child) {
+                should.not.exist(err);
+                async.parallel([
+                    function(callback) {
+                        Parent.find({ _id: { $in: child.parents }}, function(err, parents) {
+                            parents.should.be.empty;
+                            callback(err);
+                        });
+                    },
+                    function(callback) {
+                        OtherParent.find({ _id: { $in: child.otherParents }}, function(err, parents) {
+                            parents.should.be.empty;
+                            callback(err);
+                        });
+                    }],
+                    function(err) {
+                        done(err);
+                    });
+            });
+        });
+
+        describe("Save Actions", function() {
+            beforeEach(function(done) {
+                var self = this;
+                self.parent.save(function(err, parent) {
+                    self.otherParent.save(function(err, otherParent) {
+                        self.child.parents.push(parent._id);
+                        self.child.otherParents.push(otherParent._id);
+                        self.child.save(function(err, child) {
+                            done(err);
+                        });
+                    });
+                });
+            });
+
+            it("should add a child to the parent collection if the parent is set", function(done) {
+                var self = this;
+                async.parallel([
+                    function(callback) {
+                        Parent.find({ _id: { $in: self.child.parents }}, function(err, parents) {
+                            var parent;
+                            for ( var i = 0; i < parents.length; i++ )
+                            {
+                                parent = parents[i];
+                                parent.should.have.property('children').containEql(self.child._id);
+                            }
+                            callback(err);
+                        });
+                    },
+                    function(callback) {
+                        OtherParent.find({ _id: { $in: self.child.otherParents }}, function(err, parents) {
+                            var parent;
+                            for ( var i = 0; i < parents.length; i++ )
+                            {
+                                parent = parents[i];
+                                parent.should.have.property('otherChildren').containEql(self.child._id);
+                            }
+                            callback(err);
+                        });
+                    }],
+                    function(err) {
+                        done(err);
+                    });
+            });
+
+            it("should remove a child from the parent collection if the parent is set", function(done) {
+                var self = this;
+                self.child.remove(function(err, child) {
+                    async.parallel([
+                        function(callback) {
+                            Parent.find({ _id: { $in: self.child.parents }}, function(err, parents) {
+                                var parent;
+                                for ( var i = 0; i < parents.length; i++ )
+                                {
+                                    parent = parents[i];
+                                    parent.should.have.property('children').not.containEql(self.child._id);
+                                }
+                                callback(err);
+                            });
+                        },
+                        function(callback) {
+                            OtherParent.find({ _id: { $in: self.child.otherParents }}, function(err, parents) {
+                                var parent;
+                                for ( var i = 0; i < parents.length; i++ )
+                                {
+                                    parent = parents[i];
+                                    parent.should.have.property('otherChildren').not.containEql(self.child._id);
+                                }
+                                callback(err);
+                            });
+                        }],
+                        function(err) {
+                            done(err);
+                        });
                 });
             });
         });
