@@ -97,6 +97,7 @@ module.exports = exports = function relationship(schema, options) {
         if ( !this.get(relationshipPathName) )
         {
             done();
+            return;
         }
 
         var relationshipPathOptions = optionsForRelationship(this.schema.paths[relationshipPathName]);
