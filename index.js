@@ -27,17 +27,17 @@ function validatePath(relationshipPath) {
     {
         if ( _.isUndefined(relationshipPathOptions.ref) )
         {
-            throw new Error("Relationship " + relationshipPath.path +  " requires a ref");
+            return new Error("Relationship " + relationshipPath.path +  " requires a ref");
         }
 
         if ( _.isUndefined(relationshipPathOptions.childPath) )
         {
-            throw new Error("Relationship " + relationshipPath.path +  " requires a childPath for its parent");
+            return new Error("Relationship " + relationshipPath.path +  " requires a childPath for its parent");
         }
     }
     else
     {
-        throw new Error("Mission options for relationship " + relationshipPathName);
+        return new Error("Mission options for relationship " + relationshipPathName);
     }
 }
 
@@ -56,7 +56,54 @@ module.exports = exports = function relationship(schema, options) {
         {
             throw new Error("No relationship path defined");
         }
-        validatePath(relationshipPath);
+        var validationError = validatePath(relationshipPath);
+        if ( validationError )
+        {
+            throw validationError;
+        }
+        else
+        {
+            var opts = optionsForRelationship(relationshipPath);
+            if ( opts.validateExistence )
+            {
+                if ( _.isFunction(relationshipPath.options.type) )
+                {
+                    schema.path(relationshipPathName).validate(function(value, response) {
+                        var relationshipTargetModel = this.db.model(opts.ref);
+                        relationshipTargetModel.findById(value, function(err, result) {
+                            if ( err || !result )
+                            {
+                                response(false);
+                            }
+                            else
+                            {
+                                response(true);
+                            }
+                        });
+                    }, "Relationship entity " + opts.ref + " does not exist");
+                }
+                else if ( _.isObject(relationshipPath.options.type) )
+                {
+                    schema.path(relationshipPathName).validate(function(value, response) {
+                        var relationshipTargetModel = this.db.model(opts.ref);
+                        relationshipTargetModel.find({_id: { $in: value }}, function(err, result) {
+                            // check if there is an error, if the result didn't return anything,
+                            // or we didn't find the same amount of entities as the set value
+                            //expects us to
+                            if ( ( err || !result ) ||
+                                 ( result && result.length !== value.length ) )
+                            {
+                                response(false);
+                            }
+                            else
+                            {
+                                response(true);
+                            }
+                        });
+                    }, "Relationship entity " + opts.ref + " does not exist");
+                }
+            }
+        }
     });
 
     schema.pre('save', function(done) {

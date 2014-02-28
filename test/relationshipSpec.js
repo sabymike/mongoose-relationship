@@ -108,6 +108,106 @@ describe("Schema Key Tests", function() {
         });
     });
 
+    describe("Parent Existence", function() {
+        describe("Single Parent", function() {
+            var Child, Parent;
+            before(function() {
+                var ParentSchema = new Schema({
+                    children:[{type:Schema.ObjectId, ref:"ChildOneManyValidate" }]
+                });
+                Parent = mongoose.model("ParentOneManyValidate", ParentSchema);
+
+                var ChildSchema = new Schema({
+                    name:String,
+                    parent: { type: Schema.ObjectId, ref:"ParentOneManyValidate", childPath:"children", validateExistence:true }
+                });
+                ChildSchema.plugin(relationship, { relationshipPathName: 'parent' });
+                Child = mongoose.model("ChildOneManyValidate", ChildSchema);
+            });
+
+            beforeEach(function() {
+                this.child = new Child({parent:new mongoose.Types.ObjectId()});
+            });
+
+            it("should validate the existence of the relationship before saving if the flag is set", function(done) {
+                this.child.save(function(err, child) {
+                    should.exist(err);
+                    err.errors.parent.message.should.eql("Relationship entity ParentOneManyValidate does not exist");
+                    done();
+                });
+            });
+
+            it('should create the relationship if the parent actually exists', function(done) {
+                var parent = new Parent();
+                this.child.parent = parent;
+
+                var self = this;
+                parent.save(function(err, parent) {
+                    self.child.save(function(err, child) {
+                        child.should.exist;
+                        done(err);
+                    });
+                });
+            });
+        });
+
+        describe("Multiple Parents", function() {
+            var Child, Parent;
+            before(function() {
+                var ParentSchema = new Schema({
+                    children:[{type:Schema.ObjectId, ref:"ChildManyManyValidate" }]
+                });
+                Parent = mongoose.model("ParentManyManyValidate", ParentSchema);
+
+                var ChildSchema = new Schema({
+                    name:String,
+                    parents: [{ type: Schema.ObjectId, ref:"ParentManyManyValidate", childPath:"children", validateExistence:true }]
+                });
+                ChildSchema.plugin(relationship, { relationshipPathName: 'parents' });
+                Child = mongoose.model("ChildManyManyValidate", ChildSchema);
+            });
+
+            beforeEach(function() {
+                this.child = new Child({parents:[new mongoose.Types.ObjectId()]});
+            });
+
+            it("should validate the existence of the relationship before saving if the flag is set", function(done) {
+                this.child.save(function(err, child) {
+                    should.exist(err);
+                    err.errors.parents.message.should.eql("Relationship entity ParentManyManyValidate does not exist");
+                    done();
+                });
+            });
+
+            it('should fail if just one id in the relationship list does not exist', function(done) {
+                var parent = new Parent();
+                this.child.parents = [parent, new mongoose.Types.ObjectId()];
+
+                var self = this;
+                parent.save(function(err, parent) {
+                    self.child.save(function(err, child) {
+                        should.exist(err);
+                        err.errors.parents.message.should.eql("Relationship entity ParentManyManyValidate does not exist");
+                        done();
+                    });
+                });
+            });
+
+            it('should create the relationship if the parent actually exists', function(done) {
+                var parent = new Parent();
+                this.child.parents = [parent];
+
+                var self = this;
+                parent.save(function(err, parent) {
+                    self.child.save(function(err, child) {
+                        child.should.exist;
+                        done(err);
+                    });
+                });
+            });
+        });
+    });
+
     describe("One-To-Many", function() {
         var Child, Parent;
         before(function() {
