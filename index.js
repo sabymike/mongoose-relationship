@@ -106,8 +106,9 @@ module.exports = exports = function relationship(schema, options) {
         }
     });
 
-    schema.pre('save', function(done) {
+    schema.pre('save', true, function(next, done) {
         var self = this;
+        next();
         async.each(
                 relationshipPaths,
                 function(path, callback) {
@@ -126,12 +127,13 @@ module.exports = exports = function relationship(schema, options) {
 
     });
 
-    schema.pre('remove', function(done) {
+    schema.pre('remove', true, function(next, done) {
         var self = this;
+        next();
         async.each(
             relationshipPaths,
             function(path, callback) {
-                self.updateCollectionForRelationship(path, 'remove', done);
+                self.updateCollectionForRelationship(path, 'remove', callback);
             },
             function(err) {
                 done(err);
@@ -189,6 +191,11 @@ module.exports = exports = function relationship(schema, options) {
                 if ( !_.isArray(pathValue) )
                 {
                     pathValue = [pathValue];
+                }
+
+                if ( pathValue.length === 0 )
+                {
+                    return done();
                 }
 
                 relationshipTargetModel.update(
