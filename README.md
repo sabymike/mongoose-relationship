@@ -23,7 +23,7 @@ var Parent = mongoose.models("Parent", ParentSchema);
 var ChildSchema = new mongoose.Schema({
     parent: { type:Schema.ObjectId, ref:"Parent", childPath:"children" }
 });
-CarSchema.plugin(relationship, { relationshipPathName:'parent' });
+ChildSchema.plugin(relationship, { relationshipPathName:'parent' });
 var Child = mongoose.models("Child", ChildSchema)
 
 var parent = new Parent({});
@@ -47,7 +47,7 @@ var Parent = mongoose.models("Parent", ParentSchema);
 var ChildSchema = new mongoose.Schema({
     parents: [{ type:Schema.ObjectId, ref:"Parent", childPath:"children" }]
 });
-CarSchema.plugin(relationship, { relationshipPathName:'parents' });
+ChildSchema.plugin(relationship, { relationshipPathName:'parents' });
 var Child = mongoose.models("Child", ChildSchema)
 
 var parent = new Parent({});
@@ -82,7 +82,7 @@ var ChildSchema = new mongoose.Schema({
     parents: [{ type:Schema.ObjectId, ref:"Parent", childPath:"children" }]
     otherParents: [{ type:Schema.ObjectId, ref:"OtherParent", childPath:"children" }]
 });
-CarSchema.plugin(relationship, { relationshipPathName:['parents', 'otherParents'] });
+ChildSchema.plugin(relationship, { relationshipPathName:['parents', 'otherParents'] });
 var Child = mongoose.models("Child", ChildSchema)
 
 var parent = new Parent({});
@@ -113,7 +113,7 @@ var Parent = mongoose.models("Parent", ParentSchema);
 var ChildSchema = new mongoose.Schema({
     parent: { type:Schema.ObjectId, ref:"Parent", childPath:"child" }
 });
-CarSchema.plugin(relationship, { relationshipPathName:'parent' });
+ChildSchema.plugin(relationship, { relationshipPathName:'parent' });
 var Child = mongoose.models("Child", ChildSchema)
 
 var parent = new Parent({});
