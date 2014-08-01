@@ -1,5 +1,8 @@
+"use strict";
+
+/* jshint -W030 */
+
 var mongoose = require("mongoose"),
-    _ = require("underscore"),
     should = require("should"),
     async = require("async"),
     relationship = require("../");
@@ -9,9 +12,6 @@ mongoose.connect(process.env.MONGODB_URL || "mongodb://localhost:27017/mongoose-
 
 describe("Schema Key Tests", function() {
     describe("Testing initialization", function() {
-        var ParentSchema = new Schema({
-
-        });
 
         var ChildSchema = new Schema({
             name:String,
