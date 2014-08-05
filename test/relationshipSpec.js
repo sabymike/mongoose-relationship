@@ -3,6 +3,7 @@
 /* jshint -W030 */
 
 var mongoose = require("mongoose"),
+    _ = require("underscore"),
     should = require("should"),
     async = require("async"),
     relationship = require("../");
@@ -346,6 +347,20 @@ describe("Schema Key Tests", function() {
                     });
                 });
             });
+
+            it("should remove a child from the parent collection if parent is removed from child's set", function(done) {
+                var self = this;
+                self.child.parents=[self.otherParent._id];
+                self.child.save(function(err, child) {
+                    if(err) done(err);
+                    Parent.find({ children: { $in: [child._id] }}, function(err, parents) {
+                        parents.should.have.a.lengthOf(1);
+                        parents[0]._id.should.eql(self.otherParent._id);
+                        done(err);
+                    });
+                });
+            });
+
         });
     });
 

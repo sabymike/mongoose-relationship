@@ -43,6 +43,24 @@ function validatePath(relationshipPath) {
     }
 }
 
+function updateRemovedParents(self_id, relationshipTargetModel, childPath, pathValue, done) {
+    //now we should garantee that no other elements has this one as child
+    var query = {};
+    pathValue&&pathValue.length && (query['_id']={ $nin: pathValue });
+    query[childPath] = { $in: [self_id] };
+    var updateVal = {$pull: {}};
+    updateVal.$pull[childPath] = self_id;
+
+    relationshipTargetModel.update(
+        query,
+        updateVal,
+        {multi: true},
+        function (err, result) {
+            done(err);
+        }
+    )
+}
+
 module.exports = exports = function relationship(schema, options) {
     options = _.extend(defaults, options);
 
@@ -180,7 +198,7 @@ module.exports = exports = function relationship(schema, options) {
 
             if ( pathValue.length === 0 )
             {
-                return done();
+                return updateRemovedParents(this._id, relationshipTargetModel, childPath, pathValue, done);
             }
 
             relationshipTargetModel.update(
@@ -188,7 +206,11 @@ module.exports = exports = function relationship(schema, options) {
                 updateBehavior,
                 { multi: true },
                 function(err) {
-                    done(err);
+                    if(err)
+                        done(err);
+                    else
+                    //now we should garantee that no other elements has this one as child
+                        updateRemovedParents(self_id, relationshipTargetModel, childPath, pathValue, done);
                 });
         }
         else
