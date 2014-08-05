@@ -4,7 +4,7 @@
     "description":"mongoose plugin to create maintain one-many and many-many bidirectional relationships between two schemas",
     "main":"index.js",
     "scripts": {
-        "test":"mocha"
+        "test":"make test"
     },
     "keywords": [
         "mongoose",
