@@ -1,3 +1,5 @@
+"use strict";
+
 var _ = require("underscore");
 var async = require('async');
 
@@ -37,7 +39,7 @@ function validatePath(relationshipPath) {
     }
     else
     {
-        return new Error("Mission options for relationship " + relationshipPathName);
+        return new Error("Mission options for relationship " + relationshipPathOptions);
     }
 }
 
@@ -163,25 +165,25 @@ module.exports = exports = function relationship(schema, options) {
             // one-one
             if ( _.isFunction(relationshipTargetType) )
             {
-                if ( updateAction == 'add' )
+                if ( updateAction === 'add' )
                 {
-                    updateBehavior['$set'] = updateRule;
+                    updateBehavior.$set = updateRule;
                 }
-                else if ( updateAction == 'remove' )
+                else if ( updateAction === 'remove' )
                 {
-                    updateBehavior['$unset'] = updateRule;
+                    updateBehavior.$unset = updateRule;
                 }
             }
             // one-many and many-many
             else if ( _.isObject(relationshipTargetType) )
             {
-                if ( updateAction == 'add' )
+                if ( updateAction === 'add' )
                 {
-                    updateBehavior['$addToSet'] = updateRule;
+                    updateBehavior.$addToSet = updateRule;
                 }
-                else if ( updateAction == 'remove' )
+                else if ( updateAction === 'remove' )
                 {
-                    updateBehavior['$pull'] = updateRule;
+                    updateBehavior.$pull = updateRule;
                 }
             }
 
