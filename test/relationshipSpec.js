@@ -150,6 +150,36 @@ describe("Schema Key Tests", function() {
                     });
                 });
             });
+
+            it('should create and remove the relationship if the parent actually exists', function(done) {
+                var parent = new Parent();
+                this.child.parent = parent;
+
+                var self = this;
+                parent.save(function(err, parent) {
+                    parent.children.should.be.lengthOf(0);
+                    self.child.save(function(err, child) {
+                        err && done(err);
+                        child.should.exist;
+                        child.parent.should.exist;
+                        Parent.findById(parent._id, function(err, parent){
+                            err && done(err);
+                            parent.children.should.be.lengthOf(1);
+
+                            parent.children=[];
+                            parent.save(function(err, parent) {
+                                parent.should.exist;
+                                Child.findById(child._id, function(err, child){
+                                    child.should.exist;
+                                    should.not.exist(child.parent);
+                                });
+
+                                done(err);
+                            });
+                        });
+                    });
+                });
+            });
         });
 
         describe("Multiple Parents", function() {

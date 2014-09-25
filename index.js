@@ -39,7 +39,7 @@ function validatePath(relationshipPath) {
     }
     else
     {
-        return new Error("Mission options for relationship " + relationshipPathOptions);
+        return new Error("Mission options for relationship " + relationshipPathName);
     }
 }
 
@@ -81,29 +81,47 @@ module.exports = exports = function relationship(schema, options) {
         {
             throw validationError;
         }
-
-        var opts = optionsForRelationship(relationshipPath);
-        if ( opts.validateExistence )
+        else
         {
-            if ( _.isFunction(relationshipPath.options.type) )
+            var opts = optionsForRelationship(relationshipPath);
+            if ( opts.validateExistence )
             {
-                schema.path(relationshipPathName).validate(function(value, response) {
-                    var relationshipTargetModel = this.db.model(opts.ref);
-                    relationshipTargetModel.findById(value, function(err, result) {
-                        response(!err && result);
-                    });
-                }, "Relationship entity " + opts.ref + " does not exist");
-            }
-            else if ( _.isObject(relationshipPath.options.type) )
-            {
-                schema.path(relationshipPathName).validate(function(value, response) {
-                    var relationshipTargetModel = this.db.model(opts.ref);
-                    relationshipTargetModel.find({_id: { $in: value }}, function(err, result) {
-                        // check if there is an error, if the result didn't return anything,
-                        // or we didn't find the same amount of entities as the set value expects
-                        response(!err && result && result.length === value.length);
-                    });
-                }, "Relationship entity " + opts.ref + " does not exist");
+                if ( _.isFunction(relationshipPath.options.type) )
+                {
+                    schema.path(relationshipPathName).validate(function(value, response) {
+                        var relationshipTargetModel = this.db.model(opts.ref);
+                        relationshipTargetModel.findById(value, function(err, result) {
+                            if ( err || !result )
+                            {
+                                response(false);
+                            }
+                            else
+                            {
+                                response(true);
+                            }
+                        });
+                    }, "Relationship entity " + opts.ref + " does not exist");
+                }
+                else if ( _.isObject(relationshipPath.options.type) )
+                {
+                    schema.path(relationshipPathName).validate(function(value, response) {
+                        var relationshipTargetModel = this.db.model(opts.ref);
+                        relationshipTargetModel.find({_id: { $in: value }}, function(err, result) {
+                            // check if there is an error, if the result didn't return anything,
+                            // or we didn't find the same amount of entities as the set value
+                            //expects us to
+                            if ( ( err || !result ) ||
+                                ( result && result.length !== value.length ) )
+                            {
+                                response(false);
+                            }
+                            else
+                            {
+                                response(true);
+                            }
+                        });
+                    }, "Relationship entity " + opts.ref + " does not exist");
+                }
             }
         }
     });
@@ -126,6 +144,7 @@ module.exports = exports = function relationship(schema, options) {
             function(err) {
                 done(err);
             });
+
     });
 
     schema.pre('remove', true, function(next, done) {
@@ -146,7 +165,8 @@ module.exports = exports = function relationship(schema, options) {
         //defined relationship
         if ( !this.get(relationshipPathName) )
         {
-            return done();
+            done();
+            return;
         }
 
         var relationshipPathOptions = optionsForRelationship(this.schema.paths[relationshipPathName]);
@@ -163,55 +183,59 @@ module.exports = exports = function relationship(schema, options) {
             // one-one
             if ( _.isFunction(relationshipTargetType) )
             {
-                if ( updateAction === 'add' )
+                if ( updateAction == 'add' )
                 {
-                    updateBehavior.$set = updateRule;
+                    updateBehavior['$set'] = updateRule;
                 }
-                else if ( updateAction === 'remove' )
+                else if ( updateAction == 'remove' )
                 {
-                    updateBehavior.$unset = updateRule;
+                    updateBehavior['$unset'] = updateRule;
                 }
             }
             // one-many and many-many
             else if ( _.isObject(relationshipTargetType) )
             {
-                if ( updateAction === 'add' )
+                if ( updateAction == 'add' )
                 {
-                    updateBehavior.$addToSet = updateRule;
+                    updateBehavior['$addToSet'] = updateRule;
                 }
-                else if ( updateAction === 'remove' )
+                else if ( updateAction == 'remove' )
                 {
-                    updateBehavior.$pull = updateRule;
+                    updateBehavior['$pull'] = updateRule;
                 }
             }
 
-            if ( _.isEmpty(updateBehavior) )
+            if ( !_.isEmpty(updateBehavior) )
             {
-                return done();
-            }
+                var pathValue = this.get(relationshipPathName);
+                if ( !_.isArray(pathValue) )
+                {
+                    pathValue = [pathValue];
+                }
 
-            var pathValue = this.get(relationshipPathName);
-            if ( !_.isArray(pathValue) )
+                if ( pathValue.length === 0 )
+                {
+                    return updateRemovedParents(this._id, relationshipTargetModel, childPath, pathValue, done);
+                }
+
+                var self_id=this._id;
+                relationshipTargetModel.update(
+                    { _id : { $in : pathValue } },
+                    updateBehavior,
+                    { multi: true },
+                    function(err, result) {
+                        if(err)
+                            done(err);
+                        else
+                            //now we should garantee that no other elements has this one as child
+                            updateRemovedParents(self_id, relationshipTargetModel, childPath, pathValue, done);
+
+                    });
+            }
+            else
             {
-                pathValue = [pathValue];
+                done();
             }
-
-            if ( pathValue.length === 0 )
-            {
-                return updateRemovedParents(this._id, relationshipTargetModel, childPath, pathValue, done);
-            }
-
-            relationshipTargetModel.update(
-                { _id : { $in : pathValue } },
-                updateBehavior,
-                { multi: true },
-                function(err) {
-                    if(err)
-                        done(err);
-                    else
-                    //now we should garantee that no other elements has this one as child
-                        updateRemovedParents(self_id, relationshipTargetModel, childPath, pathValue, done);
-                });
         }
         else
         {
