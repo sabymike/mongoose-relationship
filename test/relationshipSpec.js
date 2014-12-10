@@ -3,7 +3,6 @@
 /* jshint -W030 */
 
 var mongoose = require("mongoose"),
-    _ = require("underscore"),
     should = require("should"),
     async = require("async"),
     relationship = require("../");
@@ -156,29 +155,32 @@ describe("Schema Key Tests", function() {
                 this.child.parent = parent;
 
                 var self = this;
-                parent.save(function(err, parent) {
-                    parent.children.should.be.lengthOf(0);
-                    self.child.save(function(err, child) {
-                        err && done(err);
-                        child.should.exist;
-                        child.parent.should.exist;
+                async.series([
+                    function(cb) {
+                        parent.save(function(err, parent) {
+                            parent.children.should.be.lengthOf(0);
+                            cb(err);
+                        });
+                    },
+                    function(cb) {
+                        self.child.save(function(err, child) {
+                            child.should.exist;
+                            child.parent.should.exist;
+                            cb(err);
+                        });
+                    },
+                    function(cb) {
                         Parent.findById(parent._id, function(err, parent){
-                            err && done(err);
+                            should.not.exist(err);
                             parent.children.should.be.lengthOf(1);
-
-                            parent.children=[];
+                            parent.children = [];
                             parent.save(function(err, parent) {
                                 parent.should.exist;
-                                Child.findById(child._id, function(err, child){
-                                    child.should.exist;
-                                    should.not.exist(child.parent);
-                                });
-
-                                done(err);
+                                cb(err);
                             });
                         });
-                    });
-                });
+                    }],
+                    done);
             });
         });
 
@@ -382,7 +384,7 @@ describe("Schema Key Tests", function() {
                 var self = this;
                 self.child.parents=[self.otherParent._id];
                 self.child.save(function(err, child) {
-                    if(err) done(err);
+                    should.not.exist(err);
                     Parent.find({ children: { $in: [child._id] }}, function(err, parents) {
                         parents.should.have.a.lengthOf(1);
                         parents[0]._id.should.eql(self.otherParent._id);
