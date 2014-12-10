@@ -132,6 +132,10 @@ The plugin currently has the following options
 
     A string or array to let the plugin know which path(s) on your schema the relationship will be created. Defaults to **relationship**
 
+- **triggerMiddleware**
+
+    Boolean value which, if set to true, will explicitly save any parents entities when a relationship is updated causing save middleware to execute. Defaults to **false**
+
 ####Path Value
 When creating a path on a schema that will represent the relationship, the childPath option is required
 
