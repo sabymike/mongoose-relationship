@@ -15,12 +15,12 @@ var mongoose = require("mongoose"),
     Schema = mongoose.Schema,
     relationship = require("mongoose-relationship");
 
-var ParentSchema = new mongoose.Schema({
+var ParentSchema = new Schema({
     children:[{ type:Schema.ObjectId, ref:"Child" }]
 });
 var Parent = mongoose.models("Parent", ParentSchema);
 
-var ChildSchema = new mongoose.Schema({
+var ChildSchema = new Schema({
     parent: { type:Schema.ObjectId, ref:"Parent", childPath:"children" }
 });
 ChildSchema.plugin(relationship, { relationshipPathName:'parent' });
@@ -39,12 +39,12 @@ var mongoose = require("mongoose"),
     Schema = mongoose.Schema,
     relationship = require("mongoose-relationship");
 
-var ParentSchema = new mongoose.Schema({
+var ParentSchema = new Schema({
     children:[{ type:Schema.ObjectId, ref:"Child" }]
 });
 var Parent = mongoose.models("Parent", ParentSchema);
 
-var ChildSchema = new mongoose.Schema({
+var ChildSchema = new Schema({
     parents: [{ type:Schema.ObjectId, ref:"Parent", childPath:"children" }]
 });
 ChildSchema.plugin(relationship, { relationshipPathName:'parents' });
@@ -68,17 +68,17 @@ var mongoose = require("mongoose"),
     Schema = mongoose.Schema,
     relationship = require("mongoose-relationship");
 
-var ParentSchema = new mongoose.Schema({
+var ParentSchema = new Schema({
     children:[{ type:Schema.ObjectId, ref:"Child" }]
 });
 var Parent = mongoose.models("Parent", ParentSchema);
 
-var OtherParentSchema = new mongoose.Schema({
+var OtherParentSchema = new Schema({
     children:[{ type:Schema.ObjectId, ref:"Child" }]
 });
 var OtherParent = mongoose.models("OtherParent", OtherParentSchema);
 
-var ChildSchema = new mongoose.Schema({
+var ChildSchema = new Schema({
     parents: [{ type:Schema.ObjectId, ref:"Parent", childPath:"children" }]
     otherParents: [{ type:Schema.ObjectId, ref:"OtherParent", childPath:"children" }]
 });
@@ -105,12 +105,12 @@ var mongoose = require("mongoose"),
     Schema = mongoose.Schema,
     relationship = require("mongoose-relationship");
 
-var ParentSchema = new mongoose.Schema({
+var ParentSchema = new Schema({
     child:{ type:Schema.ObjectId, ref:"Child" }
 });
 var Parent = mongoose.models("Parent", ParentSchema);
 
-var ChildSchema = new mongoose.Schema({
+var ChildSchema = new Schema({
     parent: { type:Schema.ObjectId, ref:"Parent", childPath:"child" }
 });
 ChildSchema.plugin(relationship, { relationshipPathName:'parent' });
