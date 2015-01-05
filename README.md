@@ -10,7 +10,7 @@ Install via NPM
 # Usage
 
 ##One-To-Many
-```
+```js
 var mongoose = require("mongoose"),
     Schema = mongoose.Schema,
     relationship = require("mongoose-relationship");
@@ -34,7 +34,7 @@ child.remove() //the parent children property will no longer contain the child's
 ```
 
 ##Many-To-Many
-```
+```js
 var mongoose = require("mongoose"),
     Schema = mongoose.Schema,
     relationship = require("mongoose-relationship");
@@ -63,7 +63,7 @@ child.remove() //both parent and parentTwo children property will no longer cont
 ```
 
 ##Many-To-Many with Multiple paths
-```
+```js
 var mongoose = require("mongoose"),
     Schema = mongoose.Schema,
     relationship = require("mongoose-relationship");
@@ -100,7 +100,7 @@ child.remove() //both parent and otherParent children property will no longer co
 ##One-To-One
 **This usage scenario will overwrite the parent's field of multiple children are assigned the same parent. The use case for this operation seems to be limited and only included for a sense of completion.**
 
-```
+```js
 var mongoose = require("mongoose"),
     Schema = mongoose.Schema,
     relationship = require("mongoose-relationship");
