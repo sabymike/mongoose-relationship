@@ -83,13 +83,26 @@ module.exports = exports = function relationship(schema, options) {
             throw validationError;
         } else {
             var opts = optionsForRelationship(relationshipPath);
-            if (opts.validateExistence) {
+            if (opts.validateExistence || opts.upsert) {
                 if (_.isFunction(relationshipPath.options.type)) {
                     schema.path(relationshipPathName).validate(function(value, response) {
                         var relationshipTargetModel = this.db.model(opts.ref);
                         relationshipTargetModel.findById(value, function(err, result) {
-                            if (err || !result) {
+                            if ( err ) {
                                 response(false);
+                            } else if ( !result ) {
+                                if ( opts.upsert ) {
+                                    var targetModel = new relationshipTargetModel({
+                                        _id: value
+                                    });
+
+                                    targetModel.save(function(err, model) {
+                                        response(!err && model);
+                                    });
+                                }
+                                else {
+                                    response(false);
+                                }
                             } else {
                                 response(true);
                             }
@@ -103,12 +116,29 @@ module.exports = exports = function relationship(schema, options) {
                                 $in: value
                             }
                         }, function(err, result) {
-                            // check if there is an error, if the result didn't return anything,
-                            // or we didn't find the same amount of entities as the set value
-                            //expects us to
-                            if ((err || !result) ||
-                                (result && result.length !== value.length)) {
+                            if ( err || !result ) {
                                 response(false);
+                            } else if ( result.length !== value.length ) {
+                                if ( opts.upsert ) {
+                                    var existingModels = result.map(function(o) { return o._id.toString(); });
+                                    value = value.map(function(id) { return id.toString(); });
+                                    var modelsToCreate = _.difference(value, existingModels);
+                                    async.each(
+                                        modelsToCreate,
+                                        function(id, cb) {
+                                            var mdl = new relationshipTargetModel({
+                                                _id: id
+                                            });
+
+                                            mdl.save(cb);
+                                        },
+                                        function(err) {
+                                            response(!err);
+                                        }
+                                    );
+                                } else {
+                                    response(false);
+                                }
                             } else {
                                 response(true);
                             }
