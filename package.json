@@ -1,6 +1,6 @@
 {
     "name":"mongoose-relationship",
-    "version":"0.0.8",
+    "version":"0.1.0",
     "description":"mongoose plugin to create maintain one-many and many-many bidirectional relationships between two schemas",
     "main":"index.js",
     "scripts": {

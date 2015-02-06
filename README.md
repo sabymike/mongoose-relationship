@@ -143,6 +143,14 @@ When creating a path on a schema that will represent the relationship, the child
 
     A string which should match an existing path in target ref schema. If this path does not exist the plugin will have no affect on the target ref.
 
+- **validateExistence**
+
+    Boolean value that tells mongoose-relationship to ensure that the parent exists before setting the relationship for the child. Defaults to **false**
+
+- **upsert**
+
+    Boolean value that controls whether a parent should be created if it does not exist upon child save. Defaults to **false**
+
 # Tests
 Test can be run simply by installing and running mocha
 

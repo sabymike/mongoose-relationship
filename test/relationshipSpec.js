@@ -7,6 +7,7 @@ var mongoose = require("mongoose"),
     async = require("async"),
     relationship = require("../");
 var Schema = mongoose.Schema;
+var ObjectId = Schema.ObjectId;
 
 mongoose.connect(process.env.MONGODB_URL || "mongodb://localhost:27017/mongoose-relationship");
 
@@ -26,7 +27,7 @@ describe("Schema Key Tests", function() {
         it("should throw an error if a ref is not provided on the relationship path", function() {
             (function() {
                 ChildSchema.add({
-                    relation: Schema.ObjectId
+                    relation: ObjectId
                 });
                 ChildSchema.plugin(relationship, {
                     relationshipPathName: 'relation'
@@ -38,7 +39,7 @@ describe("Schema Key Tests", function() {
             (function() {
                 ChildSchema.add({
                     relation: {
-                        type: Schema.ObjectId,
+                        type: ObjectId,
                         ref: 'ParentSchema'
                     }
                 });
@@ -52,7 +53,7 @@ describe("Schema Key Tests", function() {
             (function() {
                 ChildSchema.add({
                     relation: {
-                        type: Schema.ObjectId,
+                        type: ObjectId,
                         ref: 'ParentSchema',
                         childPath: "children"
                     }
@@ -70,7 +71,7 @@ describe("Schema Key Tests", function() {
             var self = this;
             var ParentSchema = new Schema({
                 child: {
-                    type: Schema.ObjectId,
+                    type: ObjectId,
                     ref:"ChildMiddleware"
                 }
             });
@@ -82,7 +83,7 @@ describe("Schema Key Tests", function() {
 
             var ChildSchema = new Schema({
                 parent: {
-                    type: Schema.ObjectId,
+                    type: ObjectId,
                     ref: "ParentMiddleware",
                     childPath: "child"
                 }
@@ -118,12 +119,101 @@ describe("Schema Key Tests", function() {
         });
     });
 
+    describe("Upsert", function() {
+        describe('One-To-One', function() {
+            var Child, Parent;
+            before(function() {
+                var ParentSchema = new Schema({
+                    child: {
+                        type: ObjectId,
+                        ref: 'ChildUpsertOneOne'
+                    }
+                });
+                Parent = mongoose.model('ParentUpsertOneOne', ParentSchema);
+
+                var ChildSchema = new Schema({
+                    parent: {
+                        type: ObjectId,
+                        ref: 'ParentUpsertOneOne',
+                        childPath: 'child',
+                        upsert: true
+                    }
+                });
+                ChildSchema.plugin(relationship, {
+                    relationshipPathName: 'parent'
+                });
+                Child = mongoose.model('ChildUpsertOneOne', ChildSchema);
+            });
+
+            it('should create the parent if it does not exist when upsert == true', function(done) {
+                var child = new Child({
+                    parent: mongoose.Types.ObjectId()
+                });
+
+                child.save(function(err, child) {
+                    should.not.exist(err);
+                    Parent.findById(child.parent, function(err, parent) {
+                        should.exist(parent);
+                        done(err);
+                    });
+                });
+            });
+        });
+
+        describe('One-To-Many', function() {
+            var Child, Parent;
+            before(function() {
+                var ParentSchema = new Schema({
+                    child: {
+                        type: ObjectId,
+                        ref: 'ChildUpsertOneMany'
+                    }
+                });
+                Parent = mongoose.model('ParentUpsertOneMany', ParentSchema);
+
+                var ChildSchema = new Schema({
+                    parents: [{
+                        type: ObjectId,
+                        ref: 'ParentUpsertOneMany',
+                        childPath: 'child',
+                        upsert: true
+                    }]
+                });
+                ChildSchema.plugin(relationship, {
+                    relationshipPathName: 'parents'
+                });
+                Child = mongoose.model('ChildUpsertOneMany', ChildSchema);
+            });
+
+            beforeEach(function(done) {
+                this.parent = new Parent({});
+                this.parent.save(done);
+            });
+
+            it('should create all the parents that do not exist', function(done) {
+                var child = new Child({
+                    parents: [this.parent._id, mongoose.Types.ObjectId()]
+                });
+
+                child.save(function(err, child) {
+                    should.not.exist(err);
+                    Parent.find({ _id: { $in: child.parents }}, function(err, parents) {
+                        parents.should.have.length(child.parents.length);
+                        parents.should.containDeep([{_id:child.parents[0]}]);
+                        parents.should.containDeep([{_id:child.parents[1]}]);
+                        done(err);
+                    });
+                });
+            });
+        });
+    });
+
     describe("One-To-One", function() {
         var Child, Parent;
         before(function() {
             var ParentSchema = new Schema({
                 child: {
-                    type: Schema.ObjectId,
+                    type: ObjectId,
                     ref: "ChildOneOne"
                 }
             });
@@ -132,7 +222,7 @@ describe("Schema Key Tests", function() {
             var ChildSchema = new Schema({
                 name: String,
                 parent: {
-                    type: Schema.ObjectId,
+                    type: ObjectId,
                     ref: "ParentOneOne",
                     childPath: "child"
                 }
@@ -196,7 +286,7 @@ describe("Schema Key Tests", function() {
             before(function() {
                 var ParentSchema = new Schema({
                     children: [{
-                        type: Schema.ObjectId,
+                        type: ObjectId,
                         ref: "ChildOneManyValidate"
                     }]
                 });
@@ -205,7 +295,7 @@ describe("Schema Key Tests", function() {
                 var ChildSchema = new Schema({
                     name: String,
                     parent: {
-                        type: Schema.ObjectId,
+                        type: ObjectId,
                         ref: "ParentOneManyValidate",
                         childPath: "children",
                         validateExistence: true
@@ -284,7 +374,7 @@ describe("Schema Key Tests", function() {
             before(function() {
                 var ParentSchema = new Schema({
                     children: [{
-                        type: Schema.ObjectId,
+                        type: ObjectId,
                         ref: "ChildManyManyValidate"
                     }]
                 });
@@ -293,7 +383,7 @@ describe("Schema Key Tests", function() {
                 var ChildSchema = new Schema({
                     name: String,
                     parents: [{
-                        type: Schema.ObjectId,
+                        type: ObjectId,
                         ref: "ParentManyManyValidate",
                         childPath: "children",
                         validateExistence: true
@@ -353,7 +443,7 @@ describe("Schema Key Tests", function() {
         before(function() {
             var ParentSchema = new Schema({
                 children: [{
-                    type: Schema.ObjectId,
+                    type: ObjectId,
                     ref: "ChildOneMany"
                 }]
             });
@@ -362,7 +452,7 @@ describe("Schema Key Tests", function() {
             var ChildSchema = new Schema({
                 name: String,
                 parent: {
-                    type: Schema.ObjectId,
+                    type: ObjectId,
                     ref: "ParentOneMany",
                     childPath: "children"
                 }
@@ -425,7 +515,7 @@ describe("Schema Key Tests", function() {
         before(function() {
             var ParentSchema = new Schema({
                 children: [{
-                    type: Schema.ObjectId,
+                    type: ObjectId,
                     ref: "ChildManyMany"
                 }]
             });
@@ -434,7 +524,7 @@ describe("Schema Key Tests", function() {
             var ChildSchema = new Schema({
                 name: String,
                 parents: [{
-                    type: Schema.ObjectId,
+                    type: ObjectId,
                     ref: "ParentManyMany",
                     childPath: "children"
                 }]
@@ -540,7 +630,7 @@ describe("Schema Key Tests", function() {
         before(function() {
             var ParentSchema = new Schema({
                 children: [{
-                    type: Schema.ObjectId,
+                    type: ObjectId,
                     ref: "ChildMultiple"
                 }]
             });
@@ -548,7 +638,7 @@ describe("Schema Key Tests", function() {
 
             var OtherParentSchema = new Schema({
                 otherChildren: [{
-                    type: Schema.ObjectId,
+                    type: ObjectId,
                     ref: "ChildMultiple"
                 }]
             });
@@ -557,12 +647,12 @@ describe("Schema Key Tests", function() {
             var ChildSchema = new Schema({
                 name: String,
                 parents: [{
-                    type: Schema.ObjectId,
+                    type: ObjectId,
                     ref: "ParentMultiple",
                     childPath: "children"
                 }],
                 otherParents: [{
-                    type: Schema.ObjectId,
+                    type: ObjectId,
                     ref: "OtherParentMultiple",
                     childPath: "otherChildren"
                 }]
