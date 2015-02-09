@@ -277,6 +277,19 @@ describe("Schema Key Tests", function() {
                     });
                 });
             });
+
+            it("should remove a child from the parent if the child relationship is unset", function(done) {
+                var self = this;
+                self.child.parent = undefined;
+                self.child.save(function(err, child) {
+                    should.not.exist(err);
+                    should.not.exist(child.parent);
+                    Parent.findById(self.parent._id, function(err, parent) {
+                        should.not.exist(parent.child);
+                        done(err);
+                    });
+                });
+            });
         });
     });
 
@@ -507,6 +520,19 @@ describe("Schema Key Tests", function() {
                     });
                 });
             });
+
+            it("should remove a child from the parent if the child relationship is unset", function(done) {
+                var self = this;
+                self.child.parent = undefined;
+                self.child.save(function(err, child) {
+                    should.not.exist(err);
+                    should.not.exist(child.parent);
+                    Parent.findById(self.parent._id, function(err, parent) {
+                        parent.children.should.be.empty;
+                        done(err);
+                    });
+                });
+            });
         });
     });
 
@@ -619,6 +645,30 @@ describe("Schema Key Tests", function() {
                         parents[0]._id.should.eql(self.otherParent._id);
                         done(err);
                     });
+                });
+            });
+
+            it("should remove a child from the parents if the child relationship is removed from its parent list", function(done) {
+                var self = this;
+                self.child.parents = self.child.parents.splice(0, 1);
+                self.child.save(function(err, child) {
+                    should.not.exist(err);
+                    child.parents.should.have.length(1);
+                    async.parallel([
+                        function(cb) {
+                            Parent.findById(self.otherParent._id, function(err, parent) {
+                                parent.children.should.be.empty;
+                                cb(err);
+                            });
+                        },
+                        function(cb) {
+                            Parent.findById(self.parent._id, function(err, parent) {
+                                parent.children.should.containEql(self.child._id);
+                                cb(err);
+                            });
+                        }
+                    ],
+                    done);
                 });
             });
 

@@ -152,19 +152,46 @@ module.exports = exports = function relationship(schema, options) {
     schema.pre('save', true, function(next, done) {
         var self = this;
         next();
-        async.each(
-            relationshipPaths,
-            function(path, callback) {
-                if (self.isModified(path)) {
-                    self.updateCollectionForRelationship(path, 'add', callback);
-                } else {
-                    callback();
-                }
-            },
-            function(err) {
-                done(err);
-            });
 
+        async.waterfall([
+            function(cb) {
+                self.constructor.findById(self._id, function(err, model) {
+                    cb(err, model);
+                });
+            },
+            function(oldModel, cb) {
+                async.each(
+                    relationshipPaths,
+                    function(path, callback) {
+                        if (self.isModified(path)) {
+                            var oldValue = oldModel ? oldModel.get(path) : undefined;
+                            var newValue = self.get(path);
+
+                            if ( !newValue ) {
+                                // if new value is empty, remove all old values from parents
+                                self.updateCollectionForRelationship(path, oldValue, 'remove', callback);
+                            } else if ( !oldValue ) {
+                                // if no original value, add all new values to parents
+                                self.updateCollectionForRelationship(path, newValue, 'add', callback);
+                            } else {
+                                async.parallel([
+                                    function(c) {
+                                        self.updateCollectionForRelationship(path, oldValue, 'remove', c);
+                                    },
+                                    function(c) {
+                                        self.updateCollectionForRelationship(path, newValue, 'add', c);
+                                    }
+                                ],
+                                callback);
+                            }
+                        } else {
+                            callback();
+                        }
+                    },
+                    cb);
+            }
+        ],
+        done);
     });
 
     schema.pre('remove', true, function(next, done) {
@@ -173,20 +200,12 @@ module.exports = exports = function relationship(schema, options) {
         async.each(
             relationshipPaths,
             function(path, callback) {
-                self.updateCollectionForRelationship(path, 'remove', callback);
+                self.updateCollectionForRelationship(path, self.get(path), 'remove', callback);
             },
-            function(err) {
-                done(err);
-            });
+            done);
     });
 
-    schema.method('updateCollectionForRelationship', function(relationshipPathName, updateAction, done) {
-        // the parent value is not set, do not try to associated it with the
-        //defined relationship
-        if (!this.get(relationshipPathName)) {
-            return done();
-        }
-
+    schema.method('updateCollectionForRelationship', function(relationshipPathName, relationshiptPathValue, updateAction, done) {
         var relationshipPathOptions = optionsForRelationship(this.schema.paths[relationshipPathName]);
         var childPath = relationshipPathOptions.childPath;
         var relationshipTargetModel = this.db.model(relationshipPathOptions.ref);
@@ -215,19 +234,18 @@ module.exports = exports = function relationship(schema, options) {
             }
 
             if (!_.isEmpty(updateBehavior)) {
-                var pathValue = this.get(relationshipPathName);
-                if (!_.isArray(pathValue)) {
-                    pathValue = [pathValue];
+                if (!_.isArray(relationshiptPathValue)) {
+                    relationshiptPathValue = [relationshiptPathValue];
                 }
 
-                if (pathValue.length === 0) {
-                    return updateRemovedParents(this._id, relationshipTargetModel, childPath, pathValue, done);
+                if (relationshiptPathValue.length === 0) {
+                    return updateRemovedParents(this._id, relationshipTargetModel, childPath, relationshiptPathValue, done);
                 }
 
                 var self = this;
                 var filterOpts = {
                     _id: {
-                        $in: pathValue
+                        $in: relationshiptPathValue
                     }
                 };
                 relationshipTargetModel.update(
@@ -251,13 +269,13 @@ module.exports = exports = function relationship(schema, options) {
                                         if (err) {
                                             done(err);
                                         } else {
-                                            updateRemovedParents(self._id, relationshipTargetModel, childPath, pathValue, done);
+                                            updateRemovedParents(self._id, relationshipTargetModel, childPath, relationshiptPathValue, done);
                                         }
                                     });
                                 }
                             });
                         } else {
-                            updateRemovedParents(self._id, relationshipTargetModel, childPath, pathValue, done);
+                            updateRemovedParents(self._id, relationshipTargetModel, childPath, relationshiptPathValue, done);
                         }
                     });
             } else {
