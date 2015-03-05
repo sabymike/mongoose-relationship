@@ -1,11 +1,11 @@
 "use strict";
 
-/* jshint -W030 */
+/* jshint expr:true */
 
 var mongoose = require("mongoose"),
     should = require("should"),
     async = require("async"),
-    relationship = require("../");
+    relationship = require("..");
 var Schema = mongoose.Schema;
 var ObjectId = Schema.ObjectId;
 
@@ -72,7 +72,7 @@ describe("Schema Key Tests", function() {
             var ParentSchema = new Schema({
                 child: {
                     type: ObjectId,
-                    ref:"ChildMiddleware"
+                    ref: "ChildMiddleware"
                 }
             });
             ParentSchema.pre('save', function(next) {
@@ -197,10 +197,18 @@ describe("Schema Key Tests", function() {
 
                 child.save(function(err, child) {
                     should.not.exist(err);
-                    Parent.find({ _id: { $in: child.parents }}, function(err, parents) {
+                    Parent.find({
+                        _id: {
+                            $in: child.parents
+                        }
+                    }, function(err, parents) {
                         parents.should.have.length(child.parents.length);
-                        parents.should.containDeep([{_id:child.parents[0]}]);
-                        parents.should.containDeep([{_id:child.parents[1]}]);
+                        parents.should.containDeep([{
+                            _id: child.parents[0]
+                        }]);
+                        parents.should.containDeep([{
+                            _id: child.parents[1]
+                        }]);
                         done(err);
                     });
                 });
@@ -655,20 +663,20 @@ describe("Schema Key Tests", function() {
                     should.not.exist(err);
                     child.parents.should.have.length(1);
                     async.parallel([
-                        function(cb) {
-                            Parent.findById(self.otherParent._id, function(err, parent) {
-                                parent.children.should.be.empty;
-                                cb(err);
-                            });
-                        },
-                        function(cb) {
-                            Parent.findById(self.parent._id, function(err, parent) {
-                                parent.children.should.containEql(self.child._id);
-                                cb(err);
-                            });
-                        }
-                    ],
-                    done);
+                            function(cb) {
+                                Parent.findById(self.otherParent._id, function(err, parent) {
+                                    parent.children.should.be.empty;
+                                    cb(err);
+                                });
+                            },
+                            function(cb) {
+                                Parent.findById(self.parent._id, function(err, parent) {
+                                    parent.children.should.containEql(self.child._id);
+                                    cb(err);
+                                });
+                            }
+                        ],
+                        done);
                 });
             });
 

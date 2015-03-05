@@ -1,11 +1,22 @@
 "use strict";
 
-var _ = require("underscore");
+var _ = require("lodash");
 var async = require('async');
 
 var defaults = {
     relationshipPathName: "relationship",
     triggerMiddleware: false
+};
+
+var operationMap = {
+    func: {
+        add: '$set',
+        remove: '$unset'
+    },
+    obj: {
+        add: '$addToSet',
+        remove: '$pull'
+    }
 };
 
 function optionsForRelationship(relationship) {
@@ -81,70 +92,73 @@ module.exports = exports = function relationship(schema, options) {
         var validationError = validatePath(relationshipPath);
         if (validationError) {
             throw validationError;
-        } else {
-            var opts = optionsForRelationship(relationshipPath);
-            if (opts.validateExistence || opts.upsert) {
-                if (_.isFunction(relationshipPath.options.type)) {
-                    schema.path(relationshipPathName).validate(function(value, response) {
-                        var relationshipTargetModel = this.db.model(opts.ref);
-                        relationshipTargetModel.findById(value, function(err, result) {
-                            if ( err ) {
-                                response(false);
-                            } else if ( !result ) {
-                                if ( opts.upsert ) {
-                                    var targetModel = new relationshipTargetModel({
-                                        _id: value
-                                    });
+        }
 
-                                    targetModel.save(function(err, model) {
-                                        response(!err && model);
-                                    });
-                                }
-                                else {
-                                    response(false);
-                                }
-                            } else {
-                                response(true);
-                            }
-                        });
-                    }, "Relationship entity " + opts.ref + " does not exist");
-                } else if (_.isObject(relationshipPath.options.type)) {
-                    schema.path(relationshipPathName).validate(function(value, response) {
-                        var relationshipTargetModel = this.db.model(opts.ref);
-                        relationshipTargetModel.find({
-                            _id: {
-                                $in: value
-                            }
-                        }, function(err, result) {
-                            if ( err || !result ) {
-                                response(false);
-                            } else if ( result.length !== value.length ) {
-                                if ( opts.upsert ) {
-                                    var existingModels = result.map(function(o) { return o._id.toString(); });
-                                    value = value.map(function(id) { return id.toString(); });
-                                    var modelsToCreate = _.difference(value, existingModels);
-                                    async.each(
-                                        modelsToCreate,
-                                        function(id, cb) {
-                                            var mdl = new relationshipTargetModel({
-                                                _id: id
-                                            });
+        var opts = optionsForRelationship(relationshipPath);
+        if (opts.validateExistence || opts.upsert) {
+            if (_.isFunction(relationshipPath.options.type)) {
+                schema.path(relationshipPathName).validate(function(value, response) {
+                    var relationshipTargetModel = this.db.model(opts.ref);
+                    relationshipTargetModel.findById(value, function(err, result) {
+                        if (err) {
+                            response(false);
+                        } else if (!result) {
+                            if (opts.upsert) {
+                                var targetModel = new relationshipTargetModel({
+                                    _id: value
+                                });
 
-                                            mdl.save(cb);
-                                        },
-                                        function(err) {
-                                            response(!err);
-                                        }
-                                    );
-                                } else {
-                                    response(false);
-                                }
+                                targetModel.save(function(err, model) {
+                                    response(!err && model);
+                                });
                             } else {
-                                response(true);
+                                response(false);
                             }
-                        });
-                    }, "Relationship entity " + opts.ref + " does not exist");
-                }
+                        } else {
+                            response(true);
+                        }
+                    });
+                }, "Relationship entity " + opts.ref + " does not exist");
+            } else if (_.isObject(relationshipPath.options.type)) {
+                schema.path(relationshipPathName).validate(function(value, response) {
+                    var relationshipTargetModel = this.db.model(opts.ref);
+                    relationshipTargetModel.find({
+                        _id: {
+                            $in: value
+                        }
+                    }, function(err, result) {
+                        if (err || !result) {
+                            response(false);
+                        } else if (result.length !== value.length) {
+                            if (opts.upsert) {
+                                var existingModels = result.map(function(o) {
+                                    return o._id.toString();
+                                });
+                                value = value.map(function(id) {
+                                    return id.toString();
+                                });
+                                var modelsToCreate = _.difference(value, existingModels);
+                                async.each(
+                                    modelsToCreate,
+                                    function(id, cb) {
+                                        var mdl = new relationshipTargetModel({
+                                            _id: id
+                                        });
+
+                                        mdl.save(cb);
+                                    },
+                                    function(err) {
+                                        response(!err);
+                                    }
+                                );
+                            } else {
+                                response(false);
+                            }
+                        } else {
+                            response(true);
+                        }
+                    });
+                }, "Relationship entity " + opts.ref + " does not exist");
             }
         }
     });
@@ -153,142 +167,113 @@ module.exports = exports = function relationship(schema, options) {
         var self = this;
         next();
 
-        async.waterfall([
-            function(cb) {
-                self.constructor.findById(self._id, function(err, model) {
-                    cb(err, model);
-                });
-            },
-            function(oldModel, cb) {
-                async.each(
-                    relationshipPaths,
-                    function(path, callback) {
-                        if (self.isModified(path)) {
-                            var oldValue = oldModel ? oldModel.get(path) : undefined;
-                            var newValue = self.get(path);
+        self.constructor.findById(self._id, function(err, oldModel) {
+            async.each(
+                relationshipPaths,
+                function(path, callback) {
+                    if (!self.isModified(path)) {
+                        return callback();
+                    }
 
-                            if ( !newValue ) {
-                                // if new value is empty, remove all old values from parents
-                                self.updateCollectionForRelationship(path, oldValue, 'remove', callback);
-                            } else if ( !oldValue ) {
-                                // if no original value, add all new values to parents
-                                self.updateCollectionForRelationship(path, newValue, 'add', callback);
-                            } else {
-                                async.parallel([
-                                    function(c) {
-                                        self.updateCollectionForRelationship(path, oldValue, 'remove', c);
-                                    },
-                                    function(c) {
-                                        self.updateCollectionForRelationship(path, newValue, 'add', c);
-                                    }
-                                ],
-                                callback);
+                    var oldValue = oldModel ? oldModel.get(path) : undefined;
+                    var newValue = self.get(path);
+
+                    async.parallel([
+                            function(cb) {
+                                self.updateCollectionForRelationship(path, oldValue, 'remove', cb);
+                            },
+                            function(cb) {
+                                self.updateCollectionForRelationship(path, newValue, 'add', cb);
                             }
-                        } else {
-                            callback();
-                        }
-                    },
-                    cb);
-            }
-        ],
-        done);
+                        ],
+                        callback);
+                }, done);
+        });
     });
 
     schema.pre('remove', true, function(next, done) {
         var self = this;
         next();
-        async.each(
-            relationshipPaths,
+        async.each(relationshipPaths,
             function(path, callback) {
-                var value = self.get(path);
-                if ( value ) {
-                    self.updateCollectionForRelationship(path, value, 'remove', callback);
-                }
-                else {
-                    return callback();
-                }
+                self.updateCollectionForRelationship(path, self.get(path), 'remove', callback);
             },
             done);
     });
 
-    schema.method('updateCollectionForRelationship', function(relationshipPathName, relationshipPathValue, updateAction, done) {
+    schema.method('updateCollectionForRelationship', function(relationshipPathName, relationshiptPathValue, updateAction, done) {
         var relationshipPathOptions = optionsForRelationship(this.schema.paths[relationshipPathName]);
         var childPath = relationshipPathOptions.childPath;
         var relationshipTargetModel = this.db.model(relationshipPathOptions.ref);
-        if (relationshipTargetModel && relationshipTargetModel.schema.paths[childPath]) {
-            var relationshipTargetModelPath = relationshipTargetModel.schema.paths[childPath];
-            var relationshipTargetType = relationshipTargetModelPath.options.type;
 
-            var updateBehavior = {};
-            var updateRule = {};
-            updateRule[childPath] = this._id;
-            // one-one
-            if (_.isFunction(relationshipTargetType)) {
-                if (updateAction === 'add') {
-                    updateBehavior.$set = updateRule;
-                } else if (updateAction === 'remove') {
-                    updateBehavior.$unset = updateRule;
-                }
-            }
-            // one-many and many-many
-            else if (_.isObject(relationshipTargetType)) {
-                if (updateAction === 'add') {
-                    updateBehavior.$addToSet = updateRule;
-                } else if (updateAction === 'remove') {
-                    updateBehavior.$pull = updateRule;
-                }
-            }
-
-            if (!_.isEmpty(updateBehavior)) {
-                if (!_.isArray(relationshipPathValue)) {
-                    relationshipPathValue = [relationshipPathValue];
-                }
-
-                if (relationshipPathValue.length === 0) {
-                    return updateRemovedParents(this._id, relationshipTargetModel, childPath, relationshipPathValue, done);
-                }
-
-                var self = this;
-                var filterOpts = {
-                    _id: {
-                        $in: relationshipPathValue
-                    }
-                };
-                relationshipTargetModel.update(
-                    filterOpts,
-                    updateBehavior, {
-                        multi: true
-                    },
-                    function(err, result) {
-                        if (err) {
-                            done(err);
-                        }
-
-                        if (options.triggerMiddleware) {
-                            relationshipTargetModel.find(filterOpts, function(err, results) {
-                                if (err) {
-                                    done(err);
-                                } else {
-                                    async.each(results, function(result, cb) {
-                                        result.save(cb);
-                                    }, function(err) {
-                                        if (err) {
-                                            done(err);
-                                        } else {
-                                            updateRemovedParents(self._id, relationshipTargetModel, childPath, relationshipPathValue, done);
-                                        }
-                                    });
-                                }
-                            });
-                        } else {
-                            updateRemovedParents(self._id, relationshipTargetModel, childPath, relationshipPathValue, done);
-                        }
-                    });
-            } else {
-                done();
-            }
-        } else {
-            done();
+        if (!relationshiptPathValue || !relationshipTargetModel || !relationshipTargetModel.schema.paths[childPath]) {
+            return done();
         }
+
+        var relationshipTargetModelPath = relationshipTargetModel.schema.paths[childPath];
+        var relationshipTargetType = relationshipTargetModelPath.options.type;
+
+        var updateBehavior = {};
+        var updateRule = {};
+        updateRule[childPath] = this._id;
+
+        // one-one
+        if (_.isFunction(relationshipTargetType)) {
+            updateBehavior[operationMap.func[updateAction]] = updateRule;
+        }
+        // one-many and many-many
+        else if (_.isObject(relationshipTargetType)) {
+            updateBehavior[operationMap.obj[updateAction]] = updateRule;
+        }
+
+        if (_.isEmpty(updateBehavior)) {
+            return done();
+        }
+
+        if (!_.isArray(relationshiptPathValue)) {
+            relationshiptPathValue = [relationshiptPathValue];
+        }
+
+        if (_.isEmpty(relationshiptPathValue)) {
+            return updateRemovedParents(this._id, relationshipTargetModel, childPath, relationshiptPathValue, done);
+        }
+
+        var self = this;
+        var filterOpts = {
+            _id: {
+                $in: relationshiptPathValue
+            }
+        };
+        relationshipTargetModel.update(
+            filterOpts,
+            updateBehavior, {
+                multi: true
+            },
+            function(err, result) {
+                if (err) {
+                    return done(err);
+                }
+
+                if (!options.triggerMiddleware) {
+                    return updateRemovedParents(self._id, relationshipTargetModel, childPath, relationshiptPathValue, done);
+                }
+
+                relationshipTargetModel.find(filterOpts, function(err, results) {
+                    if (err) {
+                        return done(err);
+                    }
+
+                    async.each(results,
+                        function(result, cb) {
+                            result.save(cb);
+                        },
+                        function(err) {
+                            if (err) {
+                                return done(err);
+                            }
+                            updateRemovedParents(self._id, relationshipTargetModel, childPath, relationshiptPathValue, done);
+                        });
+                });
+            });
     });
 };
