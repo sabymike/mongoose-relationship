@@ -30,7 +30,8 @@ describe("Schema Key Tests", function() {
                     relation: ObjectId
                 });
                 ChildSchema.plugin(relationship, {
-                    relationshipPathName: 'relation'
+                    relationshipPathName: 'relation',
+                    triggerMiddleware: false
                 });
             }).should.throw('Relationship relation requires a ref');
         });
@@ -44,7 +45,8 @@ describe("Schema Key Tests", function() {
                     }
                 });
                 ChildSchema.plugin(relationship, {
-                    relationshipPathName: 'relation'
+                    relationshipPathName: 'relation',
+                    triggerMiddleware: false
                 });
             }).should.throw('Relationship relation requires a childPath for its parent');
         });
@@ -59,7 +61,8 @@ describe("Schema Key Tests", function() {
                     }
                 });
                 ChildSchema.plugin(relationship, {
-                    relationshipPathName: 'relation'
+                    relationshipPathName: 'relation',
+                    triggerMiddleware: false
                 });
             }).should.not.throw();
         });
@@ -140,7 +143,8 @@ describe("Schema Key Tests", function() {
                     }
                 });
                 ChildSchema.plugin(relationship, {
-                    relationshipPathName: 'parent'
+                    relationshipPathName: 'parent',
+                    triggerMiddleware: false
                 });
                 Child = mongoose.model('ChildUpsertOneOne', ChildSchema);
             });
@@ -180,7 +184,8 @@ describe("Schema Key Tests", function() {
                     }]
                 });
                 ChildSchema.plugin(relationship, {
-                    relationshipPathName: 'parents'
+                    relationshipPathName: 'parents',
+                    triggerMiddleware: false
                 });
                 Child = mongoose.model('ChildUpsertOneMany', ChildSchema);
             });
@@ -236,7 +241,8 @@ describe("Schema Key Tests", function() {
                 }
             });
             ChildSchema.plugin(relationship, {
-                relationshipPathName: 'parent'
+                relationshipPathName: 'parent',
+                triggerMiddleware: false
             });
             Child = mongoose.model("ChildOneOne", ChildSchema);
         });
@@ -323,7 +329,8 @@ describe("Schema Key Tests", function() {
                     }
                 });
                 ChildSchema.plugin(relationship, {
-                    relationshipPathName: 'parent'
+                    relationshipPathName: 'parent',
+                    triggerMiddleware: false
                 });
                 Child = mongoose.model("ChildOneManyValidate", ChildSchema);
             });
@@ -411,7 +418,8 @@ describe("Schema Key Tests", function() {
                     }]
                 });
                 ChildSchema.plugin(relationship, {
-                    relationshipPathName: 'parents'
+                    relationshipPathName: 'parents',
+                    triggerMiddleware: false
                 });
                 Child = mongoose.model("ChildManyManyValidate", ChildSchema);
             });
@@ -479,7 +487,8 @@ describe("Schema Key Tests", function() {
                 }
             });
             ChildSchema.plugin(relationship, {
-                relationshipPathName: 'parent'
+                relationshipPathName: 'parent',
+                triggerMiddleware: false
             });
             Child = mongoose.model("ChildOneMany", ChildSchema);
         });
@@ -564,7 +573,8 @@ describe("Schema Key Tests", function() {
                 }]
             });
             ChildSchema.plugin(relationship, {
-                relationshipPathName: 'parents'
+                relationshipPathName: 'parents',
+                triggerMiddleware: false
             });
             Child = mongoose.model("ChildManyMany", ChildSchema);
         });
@@ -716,7 +726,8 @@ describe("Schema Key Tests", function() {
                 }]
             });
             ChildSchema.plugin(relationship, {
-                relationshipPathName: ['parents', 'otherParents']
+                relationshipPathName: ['parents', 'otherParents'],
+                triggerMiddleware: false
             });
             Child = mongoose.model("ChildMultiple", ChildSchema);
         });

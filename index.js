@@ -265,6 +265,7 @@ module.exports = exports = function relationship(schema, options) {
 
                     async.each(results,
                         function(result, cb) {
+                            result.markModified(childPath);
                             result.save(cb);
                         },
                         function(err) {
