@@ -178,7 +178,7 @@ module.exports = exports = function relationship(schema, options) {
                     var oldValue = oldModel ? oldModel.get(path) : undefined;
                     var newValue = self.get(path);
 
-                    async.parallel([
+                    async.series([
                             function(cb) {
                                 self.updateCollectionForRelationship(path, oldValue, 'remove', cb);
                             },
