@@ -85,7 +85,11 @@ module.exports = exports = function relationship(schema, options) {
     }
 
     _.each(relationshipPaths, function(relationshipPathName) {
-        var relationshipPath = schema.paths[relationshipPathName];
+        if (_.isString(relationshipPathName)) {
+            var relationshipPath = schema.paths[relationshipPathName];
+        } else if (_.isObject(relationshipPathName)) {
+            var relationshipPath = relationshipPathName;
+        }
         if (!relationshipPath) {
             throw new Error("No relationship path defined");
         }
