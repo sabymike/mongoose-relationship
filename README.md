@@ -1,5 +1,7 @@
 ## mongoose-relationship
 
+_**Note**: Maintenence on this module is deprecated. I had personally been using it for a project and over time have realized that bi-directional relationships in mongoose can become extremely complex and hinder performance as a project grows. The more I learn about mongo and designing data for it, the less likely these relationships make sense._
+
 A mongoose plugin that creates and manages relationships between two separate models. These relationships can be One-To-One, One-To-Many, or Many-To-Many. These changes are currently one-direction. If you manipulate a parents "child" property or collection, the child values will not be updated. Only changes made to the child model will update its parent.
 
 #Install
