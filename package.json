@@ -1,7 +1,7 @@
 {
   "name": "mongoose-relationship",
   "description": "mongoose plugin to create maintain one-many and many-many bidirectional relationships between two schemas",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "author": "Mike Sabatini <mike@parallelboxes.com>",
   "dependencies": {
     "async": "0.2.10",
