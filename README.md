@@ -4,14 +4,14 @@ _**Note**: Maintenence on this module is deprecated. I had personally been using
 
 A mongoose plugin that creates and manages relationships between two separate models. These relationships can be One-To-One, One-To-Many, or Many-To-Many. These changes are currently one-direction. If you manipulate a parents "child" property or collection, the child values will not be updated. Only changes made to the child model will update its parent.
 
-#Install
+# Install
 Install via NPM
 
         npm install mongoose-relationship
 
 # Usage
 
-##One-To-Many
+## One-To-Many
 ```js
 var mongoose = require("mongoose"),
     Schema = mongoose.Schema,
@@ -35,7 +35,7 @@ child.save() //the parent children property will now contain child's id
 child.remove() //the parent children property will no longer contain the child's id
 ```
 
-##Many-To-Many
+## Many-To-Many
 ```js
 var mongoose = require("mongoose"),
     Schema = mongoose.Schema,
@@ -64,7 +64,7 @@ child.save() //both parent and parentTwo children property will now contain the 
 child.remove() //both parent and parentTwo children property will no longer contain the child's id
 ```
 
-##Many-To-Many with Multiple paths
+## Many-To-Many with Multiple paths
 ```js
 var mongoose = require("mongoose"),
     Schema = mongoose.Schema,
@@ -99,7 +99,7 @@ child.save() //both parent and otherParent children property will now contain th
 child.remove() //both parent and otherParent children property will no longer contain the child's id
 ```
 
-##One-To-One
+## One-To-One
 **This usage scenario will overwrite the parent's field of multiple children are assigned the same parent. The use case for this operation seems to be limited and only included for a sense of completion.**
 
 ```js
@@ -125,9 +125,9 @@ child.save() // The parent's child property will now be set to the child's _id;
 child.remove() // The parent's child property will now be unset
 ```
 
-###Options
+### Options
 
-####Plugin
+#### Plugin
 The plugin currently has the following options
 
 - **relationshipPathName**
@@ -138,7 +138,7 @@ The plugin currently has the following options
 
     Boolean value which, if set to true, will explicitly save any parents entities when a relationship is updated causing save middleware to execute. Defaults to **false**
 
-####Path Value
+#### Path Value
 When creating a path on a schema that will represent the relationship, the childPath option is required
 
 - **childPath**
@@ -159,9 +159,9 @@ Test can be run simply by installing and running mocha
     npm install -g mocha
     mocha
 
-#Authors
+# Authors
 Mike Sabatini [@mikesabatini](https://twitter.com/mikesabatini)
 
-#License
+# License
 Copyright Mike Sabatini 2014
 Licensed under the MIT License. Enjoy
